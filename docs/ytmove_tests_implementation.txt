@@ -1,0 +1,67 @@
+# Test Implementation Plan & Walkthrough - ytmove.pl
+
+This document outlines the test suite structure, unit and functional test specifications, log assertion rules, and verification walkthrough for ytmove.pl.
+
+===============================================================================
+1. TEST ARCHITECTURE & SCRIPT REFACTORING
+===============================================================================
+
+To allow test scripts in ./tests/ to import and test internal subroutines like extract_youtube_id() in isolation without executing CLI argument parsing:
+- Top-level script execution logic in ytmove.pl is wrapped inside sub run { ... }.
+- At the bottom of ytmove.pl, an 'unless (caller)' guard is used:
+      run() unless caller;
+      1;
+- When ytmove.pl is invoked directly from shell (perl ytmove.pl), caller is false and run() executes normally.
+- When required by a test script (require './ytmove.pl'), caller is true, allowing direct testing of package functions.
+
+===============================================================================
+2. TEST SUITE STRUCTURE (./tests/)
+===============================================================================
+
+Running tests:
+    prove -v tests/
+    perl -I. tests/01_extract_id.t
+
+Test Files:
+
+1. tests/01_extract_id.t (Unit Tests for extract_youtube_id):
+   - Bracketed ID Rule: Matches LAST 11-char token in brackets (e.g., [dQw4w9WgXcQ]).
+   - Dash-Suffix ID Rule: Matches 11 valid chars at end of stem preceded by '-' (e.g., -xyz98765432).
+   - URL Fallback: Extracts v=11chars query parameters from full YouTube URLs.
+   - Raw ID Fallback: Matches bare 11-character strings.
+   - Edge Cases: Trimming whitespace, handling undef/empty strings, non-matching titles, wrong ID lengths.
+
+2. tests/02_cli_options.t (CLI Option & Path Validation):
+   - Asserts non-zero exit and warning when missing required -s or -d parameters.
+   - Asserts non-zero exit when source directory does not exist.
+   - Asserts non-zero exit when destination directory does not exist.
+   - Asserts help synopsis and options documentation on -h / --help.
+
+3. tests/03_move_functional.t (Functional Moving & Log Assertions):
+   - Creates temporary source and destination directories using File::Temp.
+   - Creates mock video/audio files matching YTIDs (including multiple files for one YTID).
+   - Pipes input containing comment lines, blank lines, valid YTIDs, unmatched YTIDs, and unparseable lines.
+   - Asserts files are correctly moved from source to destination.
+   - Log File Assertions:
+     - Asserts ytmove_log_*.txt is created in source folder.
+     - Asserts total log file line count (11 lines total).
+     - Asserts exact status entry count for each line type (MOVED: 3, NOT FOUND: 1, WARN: 1).
+     - Asserts 5 total status lines covering every non-comment/non-blank input item.
+     - Asserts summary footer counters ("Lines processed: 4 | Files moved: 3 | Unmatched/Errors: 2").
+
+4. tests/04_dry_run.t (Dry-Run & Verbose Modes):
+   - Asserts --dry-run (-n) simulates moves without relocating files out of source folder.
+   - Asserts log file contains 'DRY-RUN: Would move' entries.
+   - Asserts --verbose (-v) outputs logs to STDOUT.
+
+===============================================================================
+3. TEST VERIFICATION RESULTS
+===============================================================================
+
+All 4 test files pass 100% using prove -v tests/:
+
+Files=4, Tests=29, Result: PASS
+- 01_extract_id.t      : 5 subtests (18 assertions) - PASS
+- 02_cli_options.t     : 4 subtests (8 assertions)  - PASS
+- 03_move_functional.t : 18 assertions            - PASS
+- 04_dry_run.t         : 2 subtests (5 assertions)   - PASS

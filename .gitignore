@@ -1,0 +1,8 @@
+# Ignore log files generated during local execution/testing
+ytmove_log_*.txt
+
+# Editor / System temporary files
+*~
+*.swp
+*.tmp
+.DS_Store

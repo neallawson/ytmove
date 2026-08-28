@@ -1,0 +1,77 @@
+# Implementation Plan - ytmove.pl
+
+ytmove.pl is a Perl utility designed to parse 11-character YouTube IDs (ytid) from input lines piped via standard input (<STDIN>), locate all matching media files in a designated source directory (-s / --source), move those files to a destination directory (-d / --destination), and record each move operation in a timestamped log file inside the source directory.
+
+===============================================================================
+1. COMMAND-LINE USAGE & OPTIONS
+===============================================================================
+
+Usage:
+    ytmove.pl -s /path/to/source -d /path/to/destination < list.txt
+
+Options:
+    -s, --source       Source directory path containing files to scan/move (Required)
+    -d, --destination  Destination directory path where files are moved (Required)
+    -n, --dry-run      Simulate file moves without actually relocating files
+    -v, --verbose      Print log messages to STDOUT in addition to log file
+    -h, --help         Display help usage documentation
+
+===============================================================================
+2. YOUTUBE ID EXTRACTION LOGIC
+===============================================================================
+
+Input lines and filenames are stripped of extensions to extract the stem.
+The 11-character YouTube ID is parsed using regex rules matching python downloader specs:
+
+1. Bracketed ID (Preferred):
+   Matches the LAST bracketed 11-char token in the stem.
+   Regex: \[([A-Za-z0-9_-]{11})\][^\[]*$
+
+2. Dash-Suffix ID:
+   Matches exactly 11 valid chars at the END of the stem, preceded by '-'.
+   Regex: -([A-Za-z0-9_-]{11})$
+
+3. Fallbacks:
+   - URL query string: [?&]v=([A-Za-z0-9_-]{11})
+   - Bare 11-char ID string: ^([A-Za-z0-9_-]{11})$
+
+===============================================================================
+3. EXECUTION FLOW & INDEXING STRATEGY
+===============================================================================
+
+1. Argument Validation:
+   Verify -s and -d exist and are valid directories.
+
+2. Source Directory Pre-Scanning:
+   Pre-scans top-level files in the source directory ONCE before reading STDIN.
+   Builds an in-memory hash map:
+       %source_index = (
+           "abc12345678" => ["/source/dir/Track 1 [abc12345678].mp4", "/source/dir/Track 1 [abc12345678].m4a"],
+           "xyz98765432" => ["/source/dir/Artist - Track 2-xyz98765432.mkv"]
+       )
+
+3. Log File Creation:
+   Log file named ytmove_log_$TIMESTAMP.txt is created inside the source directory (-s).
+   Format: ytmove_log_YYYYMMDD_HHMMSS.txt
+
+4. Processing STDIN:
+   - Reads lines from STDIN.
+   - Skips empty lines and comment lines (starting with '#').
+   - Parses 11-character ytid from valid line.
+   - Looks up ytid in %source_index.
+   - Moves ALL matching files for that ytid using File::Copy::move.
+   - Appends status record (MOVED, NOT FOUND, ERROR) to the log file.
+
+===============================================================================
+4. PHASE 2 / FUTURE ENHANCEMENTS
+===============================================================================
+
+- Optional recursive directory scanning (-r / --recursive) if nested source subfolders are ever needed.
+
+===============================================================================
+5. TEST SUITE & IMPLEMENTATION PLAN
+===============================================================================
+
+Detailed test specifications, unit/functional test design, and log file status line assertion walkthrough are documented in:
+ytmove_tests_implementation.txt
+
