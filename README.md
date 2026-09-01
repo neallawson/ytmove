@@ -119,3 +119,11 @@ Project documentation lives in `./docs/`:
 
 - [`docs/ytmove_plan.txt`](docs/ytmove_plan.txt): Core architecture and design specifications.
 - [`docs/ytmove_tests_implementation.txt`](docs/ytmove_tests_implementation.txt): Test suite design specifications and verification walkthrough.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+Copyright (c) 2026 Neal Lawson <captainneal@gmail.com>.
+
